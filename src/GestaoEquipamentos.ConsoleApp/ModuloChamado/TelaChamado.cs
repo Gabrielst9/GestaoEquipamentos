@@ -1,4 +1,5 @@
-﻿using GestaoEquipamentos.ConsoleApp.ModuloEquipamento;
+﻿using GestaoEquipamentos.ConsoleApp.Compartilhado;
+using GestaoEquipamentos.ConsoleApp.ModuloEquipamento;
 
 namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
 {
@@ -49,7 +50,15 @@ namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
 
             Chamado novoChamado = ObterChamado();
 
-            repositorioChamado.CadastrarChamado(novoChamado);
+            string[] erros = novoChamado.Validar();
+
+            if (erros.Length > 0)
+            {
+                ApresentarErros(erros);
+                return;
+            }
+
+            repositorioChamado.Cadastrar(novoChamado);
 
             Program.ExibirMensagem("O chamado foi cadastrado com sucesso!", ConsoleColor.Green);
         }
@@ -71,7 +80,7 @@ namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
             Console.Write("Digite o ID do chamado que deseja editar: ");
             int idChamadoEscolhido = Convert.ToInt32(Console.ReadLine());
 
-            if (!repositorioChamado.ExisteChamado(idChamadoEscolhido))
+            if (!repositorioChamado.Existe(idChamadoEscolhido))
             {
                 Program.ExibirMensagem("O chamado mencionado não existe!", ConsoleColor.DarkYellow);
                 return;
@@ -81,7 +90,15 @@ namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
 
             Chamado novoChamado = ObterChamado();
 
-            bool conseguiuEditar = repositorioChamado.EditarChamado(idChamadoEscolhido, novoChamado);
+            string[] erros = novoChamado.Validar();
+
+            if (erros.Length > 0)
+            {
+                ApresentarErros(erros);
+                return;
+            }
+
+            bool conseguiuEditar = repositorioChamado.Editar(idChamadoEscolhido, novoChamado);
 
             if (!conseguiuEditar)
             {
@@ -111,13 +128,13 @@ namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
             Console.Write("Digite o ID do chamado que deseja excluir: ");
             int idChamadoEscolhido = Convert.ToInt32(Console.ReadLine());
 
-            if (!repositorioChamado.ExisteChamado(idChamadoEscolhido))
+            if (!repositorioChamado.Existe(idChamadoEscolhido))
             {
                 Program.ExibirMensagem("O chamado mencionado não existe!", ConsoleColor.DarkYellow);
                 return;
             }
 
-            bool conseguiuExcluir = repositorioChamado.ExcluirChamado(idChamadoEscolhido);
+            bool conseguiuExcluir = repositorioChamado.Excluir(idChamadoEscolhido);
 
             if (!conseguiuExcluir)
             {
@@ -132,10 +149,20 @@ namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
         {
             telaEquipamento.VisualizarEquipamentos(false);
 
-            Console.Write("Digite o ID do equipamento defeituoso: ");
-            int idEquipamento = Convert.ToInt32(Console.ReadLine());
+            bool conseguiuConverter = false;
 
-            Equipamento equipamentoSelecionado = telaEquipamento.repositorio.SelecionarEquipamentoPorId(idEquipamento);
+            int idEquipamento = 0;
+
+            while (!conseguiuConverter)
+            {
+                Console.Write("Digite o ID do equipamento defeituoso: ");
+                conseguiuConverter = int.TryParse(Console.ReadLine(), out idEquipamento);
+
+                if (!conseguiuConverter)
+                    Console.WriteLine("Por favor, informe um ID válido!\n");
+            }
+
+            Equipamento equipamentoSelecionado = (Equipamento)telaEquipamento.repositorio.SelecionarPorId(idEquipamento);
 
             Console.Write("Digite o título do chamado: ");
             string titulo = Console.ReadLine();
@@ -143,10 +170,7 @@ namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
             Console.Write("Digite a descrição do chamado: ");
             string descricao = Console.ReadLine();
 
-            Console.Write("Digite a data de abertura do chamado: ");
-            DateTime dataAbertura = Convert.ToDateTime(Console.ReadLine());
-
-            Chamado novoChamado = new Chamado(titulo, descricao, dataAbertura, equipamentoSelecionado);
+            Chamado novoChamado = new Chamado(titulo, descricao, equipamentoSelecionado);
 
             return novoChamado;
         }
@@ -170,26 +194,35 @@ namespace GestaoEquipamentos.ConsoleApp.ModuloChamado
 
             Console.WriteLine(
                 "{0, -10} | {1, -20} | {2, -20} | {3, -10}",
-                "Id", "Título", "Equipamento", "Data de Aquisição"
+                "Id", "Título", "Equipamento", "Dias em Aberto"
             );
 
-            Chamado[] chamadosCadastrados = repositorioChamado.SelecionarChamados();
+            Entidade[] chamadosCadastrados = repositorioChamado.SelecionarTodos();
 
-            for (int i = 0; i < chamadosCadastrados.Length; i++)
+            foreach (Chamado chamado in chamadosCadastrados)
             {
-                Chamado e = chamadosCadastrados[i];
-
-                if (e == null)
+                if (chamado == null)
                     continue;
 
                 Console.WriteLine(
                     "{0, -10} | {1, -20} | {2, -20} | {3, -10}",
-                    e.Id, e.Titulo, e.EquipamentoSelecionado.Nome, e.DataAbertura.ToShortDateString()
+                    chamado.Id, chamado.Titulo, chamado.EquipamentoSelecionado.Nome, chamado.QuantidadeDiasEmAberto
                 );
             }
 
             Console.ReadLine();
             Console.WriteLine();
+        }
+
+        private void ApresentarErros(string[] erros)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            for (int i = 0; i < erros.Length; i++)
+                Console.WriteLine(erros[i]);
+
+            Console.ResetColor();
+            Console.ReadLine();
         }
     }
 }

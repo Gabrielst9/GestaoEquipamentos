@@ -1,4 +1,6 @@
-﻿namespace GestaoEquipamentos.ConsoleApp.ModuloEquipamento
+﻿using GestaoEquipamentos.ConsoleApp.Compartilhado;
+
+namespace GestaoEquipamentos.ConsoleApp.ModuloEquipamento
 {
     public class TelaEquipamento
     {
@@ -8,7 +10,7 @@
         {
             Equipamento equipTest = new Equipamento("Notebook", "AEX-120", "Acer", 2000.00m, DateTime.Now);
 
-            repositorio.CadastrarEquipamento(equipTest);
+            repositorio.Cadastrar(equipTest);
         }
 
         public char ApresentarMenu()
@@ -50,26 +52,30 @@
 
             Console.WriteLine();
 
-            Console.Write("Digite o nome do equipamento: ");
-            string nome = Console.ReadLine();
+            Equipamento equipamento = ObterEquipamento();
 
-            Console.Write("Digite o número de série do equipamento: ");
-            string numeroSerie = Console.ReadLine();
+            string[] erros = equipamento.Validar();
 
-            Console.Write("Digite o nome do fabricante do equipamento: ");
-            string fabricante = Console.ReadLine();
+            if (erros.Length > 0)
+            {
+                ApresentarErros(erros);
+                return;
+            }
 
-            Console.Write("Digite o preço de aquisição do equipamento: R$ ");
-            decimal precoAquisicao = Convert.ToDecimal(Console.ReadLine());
-
-            Console.Write("Digite a data de fabricação do equipamento (formato: dd/MM/aaaa): ");
-            DateTime dataFabricacao = Convert.ToDateTime(Console.ReadLine());
-
-            Equipamento equipamento = new Equipamento(nome, numeroSerie, fabricante, precoAquisicao, dataFabricacao);
-
-            repositorio.CadastrarEquipamento(equipamento);
+            repositorio.Cadastrar(equipamento);
 
             Program.ExibirMensagem("O equipamento foi cadastrado com sucesso!", ConsoleColor.Green);
+        }
+
+        private void ApresentarErros(string[] erros)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            for (int i = 0; i < erros.Length; i++)
+                Console.WriteLine(erros[i]);
+
+            Console.ResetColor();
+            Console.ReadLine();
         }
 
         public void EditarEquipamento()
@@ -91,7 +97,7 @@
             Console.Write("Digite o ID do equipamento que deseja editar: ");
             int idEquipamentoEscolhido = Convert.ToInt32(Console.ReadLine());
 
-            if (!repositorio.ExisteEquipamento(idEquipamentoEscolhido))
+            if (!repositorio.Existe(idEquipamentoEscolhido))
             {
                 Program.ExibirMensagem("O equipamento mencionado não existe!", ConsoleColor.DarkYellow);
                 return;
@@ -99,25 +105,17 @@
 
             Console.WriteLine();
 
-            Console.Write("Digite o nome do equipamento: ");
-            string nome = Console.ReadLine();
+            Equipamento equipamento = ObterEquipamento();
 
-            Console.Write("Digite o número de série do equipamento: ");
-            string numeroSerie = Console.ReadLine();
+            string[] erros = equipamento.Validar();
 
-            Console.Write("Digite o nome do fabricante do equipamento: ");
-            string fabricante = Console.ReadLine();
+            if (erros.Length > 0)
+            {
+                ApresentarErros(erros);
+                return;
+            }
 
-            Console.Write("Digite o preço de aquisição do equipamento: R$ ");
-            decimal precoAquisicao = Convert.ToDecimal(Console.ReadLine());
-
-            Console.Write("Digite a data de fabricação do equipamento (formato: dd-MM-aaaa): ");
-            DateTime dataFabricacao = Convert.ToDateTime(Console.ReadLine());
-
-            Equipamento novoEquipamento =
-                new Equipamento(nome, numeroSerie, fabricante, precoAquisicao, dataFabricacao);
-
-            bool conseguiuEditar = repositorio.EditarEquipamento(idEquipamentoEscolhido, novoEquipamento);
+            bool conseguiuEditar = repositorio.Editar(idEquipamentoEscolhido, equipamento);
 
             if (!conseguiuEditar)
             {
@@ -147,13 +145,13 @@
             Console.Write("Digite o ID do equipamento que deseja excluir: ");
             int idEquipamentoEscolhido = Convert.ToInt32(Console.ReadLine());
 
-            if (!repositorio.ExisteEquipamento(idEquipamentoEscolhido))
+            if (!repositorio.Existe(idEquipamentoEscolhido))
             {
                 Program.ExibirMensagem("O equipamento mencionado não existe!", ConsoleColor.DarkYellow);
                 return;
             }
 
-            bool conseguiuExcluir = repositorio.ExcluirEquipamento(idEquipamentoEscolhido);
+            bool conseguiuExcluir = repositorio.Excluir(idEquipamentoEscolhido);
 
             if (!conseguiuExcluir)
             {
@@ -186,23 +184,43 @@
                 "Id", "Nome", "Fabricante", "Preço", "Data de Fabricação"
             );
 
-            Equipamento[] equipamentosCadastrados = repositorio.SelecionarEquipamentos();
+            Entidade[] equipamentosCadastrados = repositorio.SelecionarTodos();
 
-            for (int i = 0; i < equipamentosCadastrados.Length; i++)
+            // casting / cast
+            foreach (Equipamento equip in equipamentosCadastrados)
             {
-                Equipamento e = equipamentosCadastrados[i];
-
-                if (e == null)
+                if (equip == null)
                     continue;
 
                 Console.WriteLine(
                     "{0, -10} | {1, -15} | {2, -15} | {3, -10} | {4, -10}",
-                    e.Id, e.Nome, e.Fabricante, e.PrecoAquisicao, e.DataFabricacao.ToShortDateString() // "17/04/2024"
+                    equip.Id, equip.Nome, equip.Fabricante, equip.PrecoAquisicao, equip.DataFabricacao.ToShortDateString() // "17/04/2024"
                 );
             }
 
             Console.ReadLine();
             Console.WriteLine();
+        }
+
+        private Equipamento ObterEquipamento()
+        {
+            Console.Write("Digite o nome do equipamento: ");
+            string nome = Console.ReadLine();
+
+            Console.Write("Digite o número de série do equipamento: ");
+            string numeroSerie = Console.ReadLine();
+
+            Console.Write("Digite o nome do fabricante do equipamento: ");
+            string fabricante = Console.ReadLine();
+
+            Console.Write("Digite o preço de aquisição do equipamento: R$ ");
+            decimal precoAquisicao = Convert.ToDecimal(Console.ReadLine());
+
+            Console.Write("Digite a data de fabricação do equipamento (formato: dd/MM/aaaa): ");
+            DateTime dataFabricacao = Convert.ToDateTime(Console.ReadLine());
+
+            Equipamento equipamento = new Equipamento(nome, numeroSerie, fabricante, precoAquisicao, dataFabricacao);
+            return equipamento;
         }
     }
 }
